@@ -349,3 +349,30 @@ st.markdown("---")
 st.caption(
     "행사 운영, 동아리 공동구매, 단체 물품 구매 등의 상황에서 개인별 부담금을 계산하기 위한 Streamlit 기반 공동구매 정산 시스템"
 )
+
+
+# ------------------------------------------------
+# 할인금액 검증
+# ------------------------------------------------
+
+# 실제로 지출 가능한 최대 금액
+max_possible_discount = total_product_cost + total_common_cost
+
+# 할인금액이 총 지출 가능 금액보다 크면 오류 표시
+if total_discount > max_possible_discount:
+    st.error(
+        f"❌ 전체 할인금액({total_discount:,.0f}원)이 "
+        f"총 지출 가능 금액({max_possible_discount:,.0f}원)보다 큽니다. "
+        "할인금액을 다시 입력해주세요."
+    )
+
+    # 이후 계산 중단
+    st.stop()
+
+# 개인별 최종 부담금이 음수인지 확인
+if (df["최종 부담금"] < 0).any():
+    st.error(
+        "❌ 일부 구매자의 최종 부담금이 음수가 됩니다. "
+        "할인금액을 줄이거나 구매 개수를 확인해주세요."
+    )
+    st.stop()
