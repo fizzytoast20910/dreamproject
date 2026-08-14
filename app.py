@@ -17,10 +17,12 @@ st.set_page_config(
 st.markdown(
     """
 <style>
+    /* 전체 페이지 배경 */
     .stApp {
         background-color: #f4f7fb;
     }
 
+    /* 상단 헤더 */
     .hero {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         padding: 2rem 2.5rem;
@@ -42,6 +44,7 @@ st.markdown(
         opacity: 0.92;
     }
 
+    /* 입력 영역 카드 */
     .section-card {
         background: white;
         padding: 1.25rem;
@@ -58,39 +61,39 @@ st.markdown(
         margin-bottom: 0.75rem;
     }
 
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 0.9rem;
-        margin: 1rem 0 1.5rem 0;
-    }
-
-    .summary-card {
+    /* 전체 요약 카드 */
+    div[data-testid="stMetric"] {
         background: white;
-        border-radius: 18px;
-        padding: 1rem;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+        border-radius: 18px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+        min-height: 105px;
     }
 
-    .summary-label {
+    /* 요약 카드 제목 */
+    div[data-testid="stMetricLabel"] {
         color: #6b7280;
         font-size: 0.9rem;
-        margin-bottom: 0.35rem;
+        font-weight: 600;
     }
 
-    .summary-value {
+    /* 요약 카드 숫자 */
+    div[data-testid="stMetricValue"] {
         color: #111827;
-        font-size: 1.35rem;
+        font-size: 1.5rem;
         font-weight: 800;
     }
 
+    /* 결과 표 */
     div[data-testid="stDataFrame"] {
         border-radius: 18px;
         overflow: hidden;
         border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
     }
 
+    /* CSV 다운로드 버튼 */
     .stDownloadButton button {
         width: 100%;
         border-radius: 12px;
@@ -109,7 +112,6 @@ st.markdown(
 """,
     unsafe_allow_html=True
 )
-
 
 # ------------------------------------------------
 # 경고 팝업 함수
