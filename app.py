@@ -274,11 +274,14 @@ with left:
     )
 
     # 공동비용 분배 방법
-    distribution_method = st.radio(
-        "공동비용 분배 방법",
-        ["균등 분배", "구매 금액 비례"],
-        horizontal=True
-    )
+    distribution_method = st.selectbox(
+    "공동비용 분배 방법",
+    [
+        "균등 분배",
+        "구매 개수 비례",
+        "구매 금액 비례"
+    ]
+)
 
     st.caption(
         "균등 분배는 모든 참여자가 같은 금액을 부담하고, "
