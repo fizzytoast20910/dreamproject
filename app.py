@@ -635,9 +635,9 @@ csv_df = df[
 
 csv = csv_df.to_csv(
     index=False,
-    encoding="utf-8"
+    encoding="utf-8-sig"
 )
-)
+
 
 st.download_button(
     "📥 정산 결과 CSV 다운로드",
