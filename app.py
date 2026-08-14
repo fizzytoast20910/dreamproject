@@ -635,7 +635,8 @@ csv_df = df[
 
 csv = csv_df.to_csv(
     index=False,
-    encoding="utf-8-sig"
+    encoding="utf-8"
+)
 )
 
 st.download_button(
