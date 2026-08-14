@@ -623,29 +623,25 @@ else:
 # ------------------------------------------------
 # CSV 다운로드
 # ------------------------------------------------
-csv_df = df[
-    [
-        "구매자",
-        "구매 개수",
-        "개인 상품금액",
-        "공동비용 부담",
-        "할인 배분",
-        "최종 부담금"
-    ]
-].copy()
+csv_df = df[[
+    "구매자",
+    "구매 개수",
+    "개인 상품금액",
+    "공동비용 부담",
+    "할인 배분",
+    "최종 부담금"
+]].copy()
 
-csv = csv_df.to_csv(
-    index=False,
-    encoding="utf-8-sig"
-)
+# CSV 생성 후 UTF-8 BOM 포함 인코딩
+csv_string = csv_df.to_csv(index=False)
+csv_bytes = csv_string.encode("utf-8-sig")
 
 st.download_button(
-    "📥 정산 결과 CSV 다운로드",
-    data=csv,
+    label="📥 정산 결과 CSV 다운로드",
+    data=csv_bytes,
     file_name="공동구매_정산결과.csv",
-    mime="text/csv"
+    mime="text/csv; charset=utf-8"
 )
-
 
 # ------------------------------------------------
 # 하단 설명
