@@ -205,11 +205,12 @@ with right:
                 required=True
             ),
             "구매 개수": st.column_config.NumberColumn(
-                "구매 개수",
-                min_value=1,
-                step=1,
-                required=True
-            )
+    "구매 개수",
+    min_value=1,
+    max_value=999_999_999,  # 10억 미만만 허용
+    step=1,
+    required=True
+)
         }
     )
 
