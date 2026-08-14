@@ -537,63 +537,52 @@ if abs(difference) > 0.0001:
 
 
 # ------------------------------------------------
-# 요약 카드
+# 전체 요약
 # ------------------------------------------------
 st.markdown("### 📊 전체 요약")
 
-summary_html = f"""
-<div class="summary-grid">
+# 첫 번째 줄
+col1, col2, col3 = st.columns(3)
 
-    <div class="summary-card">
-        <div class="summary-label">총 구매 인원</div>
-        <div class="summary-value">
-            {total_people}명
-        </div>
-    </div>
+with col1:
+    st.metric(
+        label="총 구매 인원",
+        value=f"{total_people:,}명"
+    )
 
-    <div class="summary-card">
-        <div class="summary-label">총 구매 개수</div>
-        <div class="summary-value">
-            {total_quantity:,}개
-        </div>
-    </div>
+with col2:
+    st.metric(
+        label="총 구매 개수",
+        value=f"{total_quantity:,}개"
+    )
 
-    <div class="summary-card">
-        <div class="summary-label">상품 총액</div>
-        <div class="summary-value">
-            {total_product_cost:,.0f}원
-        </div>
-    </div>
+with col3:
+    st.metric(
+        label="최종 지출금액",
+        value=f"{total_final_cost:,.0f}원"
+    )
 
-    <div class="summary-card">
-        <div class="summary-label">공동비용</div>
-        <div class="summary-value">
-            {total_common_cost:,.0f}원
-        </div>
-    </div>
 
-    <div class="summary-card">
-        <div class="summary-label">전체 할인금액</div>
-        <div class="summary-value">
-            {total_discount:,.0f}원
-        </div>
-    </div>
+# 두 번째 줄
+col4, col5, col6 = st.columns(3)
 
-    <div class="summary-card">
-        <div class="summary-label">최종 지출금액</div>
-        <div class="summary-value">
-            {total_final_cost:,.0f}원
-        </div>
-    </div>
+with col4:
+    st.metric(
+        label="상품 총액",
+        value=f"{total_product_cost:,.0f}원"
+    )
 
-</div>
-"""
+with col5:
+    st.metric(
+        label="공동비용",
+        value=f"{total_common_cost:,.0f}원"
+    )
 
-st.markdown(
-    summary_html,
-    unsafe_allow_html=True
-)
-
+with col6:
+    st.metric(
+        label="전체 할인금액",
+        value=f"{total_discount:,.0f}원"
+    )
 
 # ------------------------------------------------
 # 결과 표
