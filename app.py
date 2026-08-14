@@ -205,12 +205,11 @@ with right:
                 required=True
             ),
             "구매 개수": st.column_config.NumberColumn(
-    "구매 개수",
-    min_value=1,
-    max_value=999_999_999,  # 10억 미만만 허용
-    step=1,
-    required=True
-)
+                "구매 개수",
+                min_value=1,
+                step=1,
+                required=True
+            )
         }
     )
 
@@ -255,9 +254,86 @@ total_final_cost = (
     total_product_cost + total_common_cost - total_discount
 )
 
+# 반올림 오차 보정
 difference = total_final_cost - df["최종 부담금"].sum()
 if abs(difference) > 0.0001:
     df.loc[df.index[-1], "최종 부담금"] += difference
+
+
+# ------------------------------------------------
+# 검증 (결과 출력 전에 수행)
+# ------------------------------------------------
+
+# 1. 구매 개수 10억 이상 경고
+MAX_QUANTITY = 1_000_000_000
+too_large = df[df["구매 개수"] >= MAX_QUANTITY]
+
+if not too_large.empty:
+
+    @st.dialog("⚠️ 입력값 경고")
+    def quantity_warning():
+        st.error(
+            "구매 개수가 **10억 개 이상**으로 입력되었습니다.
+
+"
+            "현실적인 범위를 초과하는 값입니다."
+        )
+
+        st.dataframe(
+            too_large[["구매자", "구매 개수"]],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.info("구매 개수를 수정한 뒤 다시 계산해주세요.")
+
+    quantity_warning()
+    st.stop()
+
+
+# 2. 할인금액 검증
+max_possible_discount = total_product_cost + total_common_cost
+
+if total_discount > max_possible_discount:
+
+    @st.dialog("⚠️ 할인금액 오류")
+    def discount_warning():
+        st.error(
+            f"전체 할인금액({total_discount:,.0f}원)이
+
+"
+            f"총 지출 가능 금액({max_possible_discount:,.0f}원)보다 큽니다."
+        )
+
+        st.info("할인금액을 줄인 뒤 다시 계산해주세요.")
+
+    discount_warning()
+    st.stop()
+
+
+# 3. 개인별 최종 부담금 음수 검증
+if (df["최종 부담금"] < 0).any():
+
+    @st.dialog("⚠️ 계산 오류")
+    def negative_warning():
+        st.error(
+            "일부 구매자의 최종 부담금이 음수가 됩니다.
+
+"
+            "할인금액을 줄이거나 구매 개수를 확인해주세요."
+        )
+
+        st.dataframe(
+            df.loc[
+                df["최종 부담금"] < 0,
+                ["구매자", "최종 부담금"]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
+
+    negative_warning()
+    st.stop()
 
 
 # ------------------------------------------------
@@ -350,30 +426,3 @@ st.markdown("---")
 st.caption(
     "행사 운영, 동아리 공동구매, 단체 물품 구매 등의 상황에서 개인별 부담금을 계산하기 위한 Streamlit 기반 공동구매 정산 시스템"
 )
-
-
-# ------------------------------------------------
-# 할인금액 검증
-# ------------------------------------------------
-
-# 실제로 지출 가능한 최대 금액
-max_possible_discount = total_product_cost + total_common_cost
-
-# 할인금액이 총 지출 가능 금액보다 크면 오류 표시
-if total_discount > max_possible_discount:
-    st.error(
-        f"❌ 전체 할인금액({total_discount:,.0f}원)이 "
-        f"총 지출 가능 금액({max_possible_discount:,.0f}원)보다 큽니다. "
-        "할인금액을 다시 입력해주세요."
-    )
-
-    # 이후 계산 중단
-    st.stop()
-
-# 개인별 최종 부담금이 음수인지 확인
-if (df["최종 부담금"] < 0).any():
-    st.error(
-        "❌ 일부 구매자의 최종 부담금이 음수가 됩니다. "
-        "할인금액을 줄이거나 구매 개수를 확인해주세요."
-    )
-    st.stop()
