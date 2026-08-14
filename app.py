@@ -443,22 +443,30 @@ df["상품비"] = (
 # ------------------------------------------------
 # 공동비용 계산
 # ------------------------------------------------
+
 if distribution_method == "균등 분배":
 
-    # 참여자 수로 동일하게 분배
+    # 모든 참여자가 동일한 금액을 부담
     df["공동비용 부담"] = (
         total_common_cost / total_people
     )
 
 else:
 
-    # 구매 개수 비율로 분배
-    df["공동비용 부담"] = (
-        total_common_cost
-        * df["구매 개수"]
-        / total_quantity
-    )
+    # 개인 상품비가 전체 상품비에서 차지하는 비율로 부담
+    total_product_cost_before = df["상품비"].sum()
 
+    if total_product_cost_before > 0:
+        df["공동비용 부담"] = (
+            total_common_cost
+            * df["상품비"]
+            / total_product_cost_before
+        )
+    else:
+        # 상품 총액이 0원인 경우 균등하게 분배
+        df["공동비용 부담"] = (
+            total_common_cost / total_people
+        )
 
 # ------------------------------------------------
 # 할인금액 계산
