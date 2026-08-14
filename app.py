@@ -17,12 +17,10 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-    /* 전체 페이지 배경 */
     .stApp {
         background-color: #f4f7fb;
     }
 
-    /* 상단 헤더 */
     .hero {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         padding: 2rem 2.5rem;
@@ -44,7 +42,6 @@ st.markdown(
         opacity: 0.92;
     }
 
-    /* 입력 영역 카드 */
     .section-card {
         background: white;
         padding: 1.25rem;
@@ -71,29 +68,24 @@ st.markdown(
         min-height: 105px;
     }
 
-    /* 요약 카드 제목 */
     div[data-testid="stMetricLabel"] {
         color: #6b7280;
         font-size: 0.9rem;
         font-weight: 600;
     }
 
-    /* 요약 카드 숫자 */
     div[data-testid="stMetricValue"] {
         color: #111827;
         font-size: 1.5rem;
         font-weight: 800;
     }
 
-    /* 결과 표 */
     div[data-testid="stDataFrame"] {
         border-radius: 18px;
         overflow: hidden;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
     }
 
-    /* CSV 다운로드 버튼 */
     .stDownloadButton button {
         width: 100%;
         border-radius: 12px;
@@ -112,6 +104,7 @@ st.markdown(
 """,
     unsafe_allow_html=True
 )
+
 
 # ------------------------------------------------
 # 경고 팝업 함수
@@ -256,14 +249,6 @@ with left:
         unsafe_allow_html=True
     )
 
-    # 기준 개당 가격
-    base_price = st.number_input(
-        "기준 개당 가격 (원)",
-        min_value=0,
-        value=10000,
-        step=100
-    )
-
     # 배송비
     shipping_cost = st.number_input(
         "배송비 (원)",
@@ -291,13 +276,13 @@ with left:
     # 공동비용 분배 방법
     distribution_method = st.radio(
         "공동비용 분배 방법",
-        ["균등 분배", "구매 개수 비례"],
+        ["균등 분배", "구매 금액 비례"],
         horizontal=True
     )
 
     st.caption(
-        "균등 분배는 참여자 수로 동일하게 나누고, "
-        "구매 개수 비례는 구매 수량 비율에 따라 공동비용을 분담합니다."
+        "균등 분배는 모든 참여자가 같은 금액을 부담하고, "
+        "구매 금액 비례는 개인 상품금액의 비율에 따라 공동비용을 분담합니다."
     )
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -319,16 +304,12 @@ with right:
 
     # 기본 구매자 데이터
     default_df = pd.DataFrame({
-        "구매자": [
-            f"구매자 {i + 1}"
-            for i in range(people_count)
-        ],
-        "구매 개수": [1] * people_count
+        "구매자": [f"구매자 {i + 1}" for i in range(people_count)],
+        "구매 개수": [1 for _ in range(people_count)],
+        "개인 상품금액": [0 for _ in range(people_count)]
     })
 
     # 구매자별 정보 입력
-    # 일부러 max_value를 설정하지 않음
-    # → 10억 이상 입력을 감지하여 팝업으로 안내할 수 있도록 함
     df = st.data_editor(
         default_df,
         use_container_width=True,
@@ -341,7 +322,14 @@ with right:
             "구매 개수": st.column_config.NumberColumn(
                 "구매 개수",
                 min_value=1,
+                max_value=10000,
                 step=1,
+                required=True
+            ),
+            "개인 상품금액": st.column_config.NumberColumn(
+                "개인 상품금액 (원)",
+                min_value=0,
+                step=100,
                 required=True
             )
         }
@@ -354,23 +342,29 @@ with right:
 # 기본 입력값 검증
 # ------------------------------------------------
 
-# 구매 개수를 숫자로 변환
-df["구매 개수"] = pd.to_numeric(
-    df["구매 개수"],
-    errors="coerce"
-)
+# 구매 개수 숫자 변환
+try:
+    df["구매 개수"] = pd.to_numeric(
+        df["구매 개수"],
+        errors="coerce"
+    ).fillna(1)
 
-# 비어 있거나 잘못된 값은 1개로 처리
-df["구매 개수"] = df["구매 개수"].fillna(1)
+    # 1개 미만이면 1개로 처리
+    df.loc[df["구매 개수"] < 1, "구매 개수"] = 1
+    df["구매 개수"] = df["구매 개수"].astype(int)
 
-# 1개보다 작으면 1개로 수정
-df.loc[
-    df["구매 개수"] < 1,
-    "구매 개수"
-] = 1
+    # 개인 상품금액 숫자 변환
+    df["개인 상품금액"] = pd.to_numeric(
+        df["개인 상품금액"],
+        errors="coerce"
+    ).fillna(0)
 
-# 정수로 변환
-df["구매 개수"] = df["구매 개수"].astype(int)
+    # 음수 금액 방지
+    df.loc[df["개인 상품금액"] < 0, "개인 상품금액"] = 0
+
+except Exception:
+    st.error("입력값을 확인하는 과정에서 문제가 발생했습니다.")
+    st.stop()
 
 
 # ------------------------------------------------
@@ -378,44 +372,34 @@ df["구매 개수"] = df["구매 개수"].astype(int)
 # ------------------------------------------------
 total_people = len(df)
 total_quantity = int(df["구매 개수"].sum())
+total_product_cost = float(df["개인 상품금액"].sum())
 
-# 공동비용
-total_common_cost = (
-    shipping_cost + other_cost
-)
+# 배송비 + 기타 공동비용
+total_common_cost = shipping_cost + other_cost
 
 
 # ------------------------------------------------
-# 1. 구매 개수 10억 이상 검증
+# 구매 개수 10억 이상 검증
 # ------------------------------------------------
 MAX_QUANTITY = 1_000_000_000
 
-too_large = df[
-    df["구매 개수"] >= MAX_QUANTITY
-]
+too_large = df[df["구매 개수"] >= MAX_QUANTITY]
 
 if not too_large.empty:
 
-    # Streamlit 모달 팝업
     @st.dialog("⚠️ 구매 개수 입력 경고")
     def quantity_warning_dialog():
         show_quantity_warning(too_large)
 
     quantity_warning_dialog()
-
-    # 오류가 있으므로 이후 계산 중단
     st.stop()
 
 
 # ------------------------------------------------
-# 2. 할인금액 검증
+# 할인금액 검증
 # ------------------------------------------------
-
 # 할인 적용 전 총 지출 가능 금액
-max_possible_discount = (
-    base_price * total_quantity
-    + total_common_cost
-)
+max_possible_discount = total_product_cost + total_common_cost
 
 if total_discount > max_possible_discount:
 
@@ -427,23 +411,12 @@ if total_discount > max_possible_discount:
         )
 
     discount_warning_dialog()
-
-    # 오류가 있으므로 이후 계산 중단
     st.stop()
-
-
-# ------------------------------------------------
-# 상품비 계산
-# ------------------------------------------------
-df["상품비"] = (
-    base_price * df["구매 개수"]
-)
 
 
 # ------------------------------------------------
 # 공동비용 계산
 # ------------------------------------------------
-
 if distribution_method == "균등 분배":
 
     # 모든 참여자가 동일한 금액을 부담
@@ -453,38 +426,51 @@ if distribution_method == "균등 분배":
 
 else:
 
-    # 개인 상품비가 전체 상품비에서 차지하는 비율로 부담
-    total_product_cost_before = df["상품비"].sum()
-
-    if total_product_cost_before > 0:
+    # 개인 상품금액 비율에 따라 공동비용을 분배
+    if total_product_cost > 0:
         df["공동비용 부담"] = (
             total_common_cost
-            * df["상품비"]
-            / total_product_cost_before
+            * df["개인 상품금액"]
+            / total_product_cost
         )
     else:
-        # 상품 총액이 0원인 경우 균등하게 분배
+        # 상품금액이 모두 0원이라면 균등 분배
         df["공동비용 부담"] = (
             total_common_cost / total_people
         )
 
+
 # ------------------------------------------------
 # 할인금액 계산
 # ------------------------------------------------
+# 개인 상품금액 비율에 따라 전체 할인금액을 배분
+if total_product_cost > 0:
+    df["할인 배분"] = (
+        total_discount
+        * df["개인 상품금액"]
+        / total_product_cost
+    )
+else:
+    # 상품금액이 모두 0원이면 할인금액도 배분할 기준이 없으므로 오류 처리
+    if total_discount > 0:
+        @st.dialog("❌ 할인금액 입력 경고")
+        def zero_product_discount_dialog():
+            st.error(
+                "개인 상품금액의 합계가 0원인데 전체 할인금액이 입력되었습니다.\n\n"
+                "개인 상품금액을 먼저 입력하거나 할인금액을 0원으로 설정해주세요."
+            )
 
-# 개인 구매 개수 비율에 따라 할인금액을 분배
-df["할인 배분"] = (
-    total_discount
-    * df["구매 개수"]
-    / total_quantity
-)
+        zero_product_discount_dialog()
+        st.stop()
+
+    df["할인 배분"] = 0.0
 
 
 # ------------------------------------------------
 # 최종 부담금 계산
 # ------------------------------------------------
 df["최종 부담금"] = (
-    df["상품비"]
+    df["개인 상품금액"]
     + df["공동비용 부담"]
     - df["할인 배분"]
 )
@@ -493,9 +479,7 @@ df["최종 부담금"] = (
 # ------------------------------------------------
 # 개인별 최종 부담금 음수 검증
 # ------------------------------------------------
-negative_df = df[
-    df["최종 부담금"] < 0
-]
+negative_df = df[df["최종 부담금"] < 0]
 
 if not negative_df.empty:
 
@@ -504,21 +488,12 @@ if not negative_df.empty:
         show_negative_warning(negative_df)
 
     negative_warning_dialog()
-
-    # 오류가 있으므로 결과 출력 중단
     st.stop()
 
 
 # ------------------------------------------------
 # 전체 금액 계산
 # ------------------------------------------------
-
-# 상품 총액
-total_product_cost = int(
-    df["상품비"].sum()
-)
-
-# 최종 지출금액
 total_final_cost = (
     total_product_cost
     + shipping_cost
@@ -530,7 +505,6 @@ total_final_cost = (
 # ------------------------------------------------
 # 소수점 차이 보정
 # ------------------------------------------------
-
 difference = (
     total_final_cost
     - df["최종 부담금"].sum()
@@ -538,12 +512,8 @@ difference = (
 
 if abs(difference) > 0.0001:
 
-    # 계산 과정에서 발생하는 소수점 차이를
-    # 마지막 구매자에게 조정
-    df.loc[
-        df.index[-1],
-        "최종 부담금"
-    ] += difference
+    # 계산 과정에서 발생하는 소수점 차이를 마지막 구매자에게 조정
+    df.loc[df.index[-1], "최종 부담금"] += difference
 
 
 # ------------------------------------------------
@@ -594,6 +564,7 @@ with col6:
         value=f"{total_discount:,.0f}원"
     )
 
+
 # ------------------------------------------------
 # 결과 표
 # ------------------------------------------------
@@ -603,24 +574,22 @@ display_df = df.copy()
 
 # 금액을 보기 좋은 문자열로 변환
 for col in [
-    "상품비",
+    "개인 상품금액",
     "공동비용 부담",
     "할인 배분",
     "최종 부담금"
 ]:
-
     display_df[col] = display_df[col].map(
         lambda x: f"{x:,.0f}원"
     )
 
 
-# 필요한 열만 표시
 st.dataframe(
     display_df[
         [
             "구매자",
             "구매 개수",
-            "상품비",
+            "개인 상품금액",
             "공동비용 부담",
             "할인 배분",
             "최종 부담금"
@@ -637,14 +606,11 @@ st.dataframe(
 final_sum = df["최종 부담금"].sum()
 
 if abs(final_sum - total_final_cost) < 0.01:
-
     st.success(
         "✅ 개인별 최종 부담금의 합계가 "
         "전체 최종 지출금액과 정확하게 일치합니다."
     )
-
 else:
-
     st.error(
         "❌ 개인별 금액의 합계와 전체 지출금액이 "
         "일치하지 않습니다."
@@ -658,7 +624,7 @@ csv_df = df[
     [
         "구매자",
         "구매 개수",
-        "상품비",
+        "개인 상품금액",
         "공동비용 부담",
         "할인 배분",
         "최종 부담금"
